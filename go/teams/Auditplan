@@ -2,10 +2,10 @@ HIPRI
 handle boxAuditError in gui - check if it even works
 Tests
 NEEED WAY MORE LOGGING!
-What happens if the db is corrupted/ force killed or something
 clean up box_audit.go
-It's ok if there's no box audit summary because we can just rotate and then there will be one ETC. NOT TRUe, need to to REHEJ as well TODO ROLLOUT! PEOPLE HAVE IN CACHE BUT NO BOXSUMMARHASHES...  TODO when to change BSh to Require?
+TEST for upgrade path
 put the permanent in noclean
+switch to OK with corruptions for release.
 
 LOWPRI
 I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...or just some keybase1Audit{} that embds an Attempt
@@ -13,3 +13,8 @@ featureflag? - don't release
 Maybe ServerMal functions have a special suffix or opposite (Suspicious? or different err type...:()
 
 ------------------
+
+Also servhej
+
+skip for open team ...
+public implicit ok

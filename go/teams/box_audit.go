@@ -253,6 +253,9 @@ func maybeGetVersionedFromDisk(mctx libkb.MetaContext, dbKey libkb.DbKey, i Vers
 	v, ok := (i).(Versioned)
 	if !ok {
 		return false, fmt.Errorf("failed to cast %+v as a Versioned", i)
+		// TODO: switch to below
+		// m.CErrorf("Bad type assertion in maybeGetVersionedFromDisk for %s @ %d", dbKey, currentVersion)
+		// return nil, nil
 	}
 	if v.GetVersion() != currentVersion {
 		mctx.CDebugf("Not returning outdated obj at version %d (now at version %d)", v.GetVersion(), currentVersion)
@@ -515,10 +518,14 @@ func (a *BoxAuditor) IsInJail(mctx libkb.MetaContext, teamID keybase1.TeamID) (b
 		valBool, ok := val.(bool)
 		if !ok {
 			return false, fmt.Errorf("failed to coerce jail lru member %+v to bool", val)
+			// TODO: switch to below for release
+			// m.CErrorf("Bad type assertion in maybeGetVersionedFromDisk for %s @ %d", dbKey, currentVersion)
+			goto disk
 		}
 		return valBool, nil
 	}
 
+disk:
 	var jail BoxAuditJail
 	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditJailDbKey(), &jail, a.Version)
 	if err != nil {
