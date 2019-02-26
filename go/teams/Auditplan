@@ -8,7 +8,7 @@ It's ok if there's no box audit summary because we can just rotate and then ther
 put the permanent in noclean
 
 LOWPRI
-I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...
+I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...or just some keybase1Audit{} that embds an Attempt
 featureflag? - don't release
 Maybe ServerMal functions have a special suffix or opposite (Suspicious? or different err type...:()
 

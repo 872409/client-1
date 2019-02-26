@@ -579,6 +579,48 @@ func (a *BoxAuditor) shouldAudit(mctx libkb.MetaContext, team Team) (bool, error
 	return role.IsOrAbove(keybase1.TeamRole_WRITER), nil
 }
 
+// loadTeamForBoxAudit loads a team once, but if the client
+// has not yet stored BoxSummaryHashes (due to being an old client)
+// it does a force full reload so it is populated.
+func loadTeamForBoxAudit(mctx libkb.MetaContext, teamID keybase1.TeamID) (*Team, error) {
+	return loadTeamForBoxAuditInner(mctx, teamID, false)
+}
+
+func loadTeamForBoxAuditInner(mctx libkb.MetaContext, teamID keybase1.TeamID, force bool) (*Team, error) {
+	arg := keybase1.LoadTeamArg{
+		ID:          teamID,
+		ForceRepoll: true,
+
+		// The team loader calls box audit if the team is in the jail, so
+		// prevent an infinite loop by disabling that check only for audits.
+		SkipBoxAuditCheck: true,
+		// TODO other opts?0
+
+	}
+
+	if force {
+		arg.ForceFullReload = true
+	}
+
+	team, err := Load(context.TODO(), mctx.G(), arg)
+	if err != nil {
+		return nil, err
+	}
+	if team == nil {
+		return nil, fmt.Errorf("got nil team from loader")
+	}
+
+	if team.GetBoxSummaryHashes() == nil {
+		if !force {
+			return loadTeamForBoxAuditInner(mctx, teamID, true)
+		} else {
+			return nil, fmt.Errorf("failed to get a non-nil box summary map after full reload")
+		}
+	}
+
+	return team, nil
+}
+
 // Attempt tries one time to box audit a Team ID. It does not store any
 // persistent state to disk.
 func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rotateBeforeAudit bool) keybase1.BoxAuditAttempt {
@@ -597,24 +639,10 @@ func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rot
 		return &msg
 	}
 
-	// SKIP FOR OPEN TEAM!!!
-	// what if its open/public team?
-	team, err := Load(context.TODO(), mctx.G(), keybase1.LoadTeamArg{
-		ID:          teamID,
-		ForceRepoll: true,
-
-		// The team loader calls box audit if the team is in the jail, so
-		// prevent an infinite loop by disabling that check only for audits.
-		SkipBoxAuditCheck: true,
-
-		// TODO other opts?0
-	})
+	// HERE
+	team, err := loadTeamForBoxAudit(mctx, teamID)
 	if err != nil {
-		attempt.Error = getErrorMessage(err)
-		return attempt
-	}
-	if team == nil {
-		attempt.Error = getErrorMessage(fmt.Errorf("got nil team"))
+		attempt.Error = getErrorMessage(fmt.Errorf("failed to load team: %s", err))
 		return attempt
 	}
 
