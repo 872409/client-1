@@ -360,6 +360,7 @@ const MaxRetryAttempts = 6
 
 // RetryNextBoxAudit selects a teamID from the box audit retry queue and performs another box audit.
 func (a *BoxAuditor) RetryNextBoxAudit(mctx libkb.MetaContext) error {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	queueItem, err := a.popRetryQueue(mctx)
 	if err != nil {
 		return err
@@ -375,6 +376,7 @@ func (a *BoxAuditor) RetryNextBoxAudit(mctx libkb.MetaContext) error {
 // implicit teams, and audits it. It may succeed trivially because, for example, user is a reader
 // and so does not have permissions to do a box audit (keybase1.BoxAuditAttemptResult_OK_NOT_ATTEMPTED)
 func (a *BoxAuditor) BoxAuditRandomTeam(mctx libkb.MetaContext) error {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	teamID, err := RandomKnownTeamID(mctx)
 	if err != nil {
 		return err
@@ -389,6 +391,7 @@ func (a *BoxAuditor) BoxAuditRandomTeam(mctx libkb.MetaContext) error {
 const MaxBoxAuditLogSize = 10
 
 func (a *BoxAuditor) GetBoxAuditLog(mctx libkb.MetaContext, teamID keybase1.TeamID) (*BoxAuditLog, error) {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	var log BoxAuditLog
 	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditLogDbKey(teamID), &log, a.Version)
 	if err != nil {
@@ -400,6 +403,8 @@ func (a *BoxAuditor) GetBoxAuditLog(mctx libkb.MetaContext, teamID keybase1.Team
 	return &log, nil
 }
 
+const BoxAuditTag = "BOXAUD"
+
 // BoxAuditTeam performs one attempt of a BoxAudit. If one is in progress for
 // the teamid, make a new attempt. If exceeded max tries or hit a malicious
 // error, return a fatal error.  Otherwise, make a new audit and fill it with
@@ -410,7 +415,7 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 	a.Lock()
 	defer a.Unlock()
 
-	mctx = mctx.WithLogTag("SUMAUD")
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	dbKey := BoxAuditLogDbKey(teamID)
 
 	var log BoxAuditLog
@@ -451,7 +456,7 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 		log.Audits = append(log.Audits, audit)
 	}
 	if len(log.Audits) > MaxBoxAuditLogSize {
-		log.Audits = log.Audits[MaxBoxAuditLogSize-len(log.Audits):]
+		log.Audits = log.Audits[len(log.Audits)-MaxBoxAuditLogSize:]
 	}
 	log.InProgress = attempt.Result == keybase1.BoxAuditAttemptResult_FAILURE_RETRYABLE
 
@@ -488,6 +493,7 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 }
 
 func (a *BoxAuditor) AssertOKOrReaudit(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	inJail, err := mctx.G().GetTeamBoxAuditor().IsInJail(mctx, teamID)
 	if err != nil {
 		return fmt.Errorf("failed to check box audit jail during team load: %s", err)
@@ -503,6 +509,7 @@ func (a *BoxAuditor) AssertOKOrReaudit(mctx libkb.MetaContext, teamID keybase1.T
 }
 
 func (a *BoxAuditor) IsInJail(mctx libkb.MetaContext, teamID keybase1.TeamID) (bool, error) {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	val, ok := a.jailLRU.Get(teamID)
 	if ok {
 		valBool, ok := val.(bool)
@@ -563,7 +570,7 @@ func (a *BoxAuditor) unjail(mctx libkb.MetaContext, teamID keybase1.TeamID) erro
 	return nil
 }
 
-func (a *BoxAuditor) ShouldAudit(mctx libkb.MetaContext, team Team) (bool, error) {
+func (a *BoxAuditor) shouldAudit(mctx libkb.MetaContext, team Team) (bool, error) {
 	role, err := team.MemberRole(mctx.Ctx(), mctx.CurrentUserVersion())
 	if err != nil {
 		return false, err
@@ -575,6 +582,7 @@ func (a *BoxAuditor) ShouldAudit(mctx libkb.MetaContext, team Team) (bool, error
 // Attempt tries one time to box audit a Team ID. It does not store any
 // persistent state to disk.
 func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rotateBeforeAudit bool) keybase1.BoxAuditAttempt {
+	mctx = mctx.WithLogTag(BoxAuditTag)
 	attempt := keybase1.BoxAuditAttempt{
 		Result: keybase1.BoxAuditAttemptResult_FAILURE_RETRYABLE,
 		Ctime:  keybase1.ToUnixTime(time.Now()),
@@ -591,10 +599,14 @@ func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rot
 
 	// SKIP FOR OPEN TEAM!!!
 	// what if its open/public team?
-	fmt.Println(teamID)
 	team, err := Load(context.TODO(), mctx.G(), keybase1.LoadTeamArg{
 		ID:          teamID,
 		ForceRepoll: true,
+
+		// The team loader calls box audit if the team is in the jail, so
+		// prevent an infinite loop by disabling that check only for audits.
+		SkipBoxAuditCheck: true,
+
 		// TODO other opts?0
 	})
 	if err != nil {
@@ -619,7 +631,7 @@ func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rot
 	attempt.Generation = &g
 
 	// TODO SHOULDNT audit if Open
-	shouldAudit, err := a.ShouldAudit(mctx, *team)
+	shouldAudit, err := a.shouldAudit(mctx, *team)
 	if err != nil {
 		attempt.Error = getErrorMessage(err)
 		return attempt
@@ -629,21 +641,19 @@ func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rot
 		return attempt
 	}
 
-	spew.Dump("@@@ACTSUM")
-
 	actualSummary, err := retrieveAndVerifySigchainSummary(mctx, team)
 	if err != nil {
 		attempt.Error = getErrorMessage(err)
 		return attempt
 	}
-	fmt.Printf("actual: %+v\n", actualSummary.table)
+	fmt.Printf("@@@actual: %+v\n", actualSummary.table)
 
 	expectedSummary, err := calculateExpectedSummary(mctx, team)
 	if err != nil {
 		attempt.Error = getErrorMessage(err)
 		return attempt
 	}
-	fmt.Printf("expected: %+v\n", expectedSummary.table)
+	fmt.Printf("@@@expected: %+v\n", expectedSummary.table)
 
 	if !bytes.Equal(expectedSummary.Hash(), actualSummary.Hash()) {
 		attempt.Error = getErrorMessage(fmt.Errorf("box summary hash mismatch"))

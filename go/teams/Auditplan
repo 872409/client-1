@@ -1,31 +1,35 @@
-Also CLI options to trigger box audits... how does that interact withs chedule? Maybe no scheduling.
-Make sure works fine if manually triggered several times
-
+HIPRI
+handle boxAuditError in gui
+Tests
 NEEED WAY MORE LOGGING!
-
 What happens if the db is corrupted/ force killed or something
-featureflag?
+
+
+
+LOWPRI
+I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...
+featureflag? - don't release
+
+------------------
 
 Maybe ServerMal functions have a special suffix
 or opposite (Suspicious? or different err type...:()
-
-It's ok if there's no box audit summary because we can just rotate and then there will be one ETC.
-TODO stop hard requiring audit summaries in chain loader... just optionalok?
-
-handle boxAuditError in gui
-Tests
-CMD work
-I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...
 
 // TODO make sure it still works if we're in jail. we need
 // some logic that filters jailed bros out of the random selection BUT
 // still allows it when manually auditing
 or maybe not
 
-provide rotate before audit fn?
-
 GET RID OF HASH IN ENDPOINT
 
+It's ok if there's no box audit summary because we can just rotate and then there will be one ETC.
+    NOT TRUe, need to to REHEJ as well
 TODO ROLLOUT! PEOPLE HAVE IN CACHE BUT NO BOXSUMMARHASHES...
+TODO when to change BSh to Require?
 
 put the permanent in noclean
+
+rename AssertOK to AssertUnjailedOrReaudit
+
+a ton of BOXAUD stuff ons tartup..investigate
+(it was probably jail check)...

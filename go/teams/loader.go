@@ -308,10 +308,12 @@ func (l *TeamLoader) load1(ctx context.Context, me keybase1.UserVersion, lArg ke
 		}
 	}
 
-	mctx := libkb.NewMetaContext(ctx, l.G())
-	err = l.G().GetTeamBoxAuditor().AssertOKOrReaudit(mctx, teamID)
-	if err != nil {
-		l.G().NotifyRouter.HandleBoxAuditError(err.Error())
+	if !lArg.SkipBoxAuditCheck {
+		mctx := libkb.NewMetaContext(ctx, l.G())
+		err = l.G().GetTeamBoxAuditor().AssertOKOrReaudit(mctx, teamID)
+		if err != nil {
+			l.G().NotifyRouter.HandleBoxAuditError(err.Error())
+		}
 	}
 
 	return &ret.team, nil

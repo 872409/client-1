@@ -740,6 +740,9 @@ protocol teams {
     boolean forceRepoll;               // Force a sync with merkle.
     boolean staleOK;                   // If a very stale cache hit is OK.
     boolean allowNameLookupBurstCache; // If it's ok to hit the nameLookup burst cache
+
+    // Allow the box auditor to skip the jailed-team check during auditor team loads
+    boolean skipBoxAuditCheck;
   }
 
   record FastTeamLoadArg {
