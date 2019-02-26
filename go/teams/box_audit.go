@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/keybase/client/go/libkb"
 	"github.com/keybase/go-codec/codec"
 	"golang.org/x/net/context"
@@ -26,7 +27,7 @@ import (
 func KeySetToTeamIDs(dbKeySet libkb.DBKeySet) ([]keybase1.TeamID, error) {
 	teamIDSet := make(map[keybase1.TeamID]bool)
 	teamIDs := make([]keybase1.TeamID, 0, len(dbKeySet))
-	for dbKey, _ := range dbKeySet {
+	for dbKey := range dbKeySet {
 		teamID, err := ParseTeamIDKey(dbKey.Key)
 		if err != nil {
 			return nil, err
@@ -81,16 +82,47 @@ type BoxAuditor struct {
 	sync.Mutex
 	Initialized bool
 	Version     Version
+
+	jailLRUMutex sync.Mutex
+	jailLRU      *lru.Cache
 }
 
 var _ libkb.TeamBoxAuditor = &BoxAuditor{}
 
+func (a *BoxAuditor) getJailLRU() *lru.Cache {
+	a.jailLRUMutex.Lock()
+	defer a.jailLRUMutex.Unlock()
+	return a.jailLRU
+}
+
+const JailLRUSize = 25
+
+func (a *BoxAuditor) resetJailLRU() {
+	a.jailLRUMutex.Lock()
+	defer a.jailLRUMutex.Unlock()
+
+	if a.jailLRU != nil {
+		a.jailLRU.Purge()
+	}
+
+	jailLRU, err := lru.New(JailLRUSize)
+	if err != nil {
+		panic(err)
+	}
+	a.jailLRU = jailLRU
+}
+
 func (a *BoxAuditor) OnLogout(mctx libkb.MetaContext) {
-	return
+	a.resetJailLRU()
 }
 
 func NewBoxAuditor(g *libkb.GlobalContext) *BoxAuditor {
-	return &BoxAuditor{Initialized: true, Version: CurrentBoxAuditVersion}
+	a := &BoxAuditor{
+		Initialized: true,
+		Version:     CurrentBoxAuditVersion,
+	}
+	a.jailLRU = a.getJailLRU()
+	return a
 }
 
 func NewBoxAuditorAndInstall(g *libkb.GlobalContext) {
@@ -353,6 +385,8 @@ func (a *BoxAuditor) BoxAuditRandomTeam(mctx libkb.MetaContext) error {
 	return a.BoxAuditTeam(mctx, *teamID)
 }
 
+const MaxBoxAuditLogSize = 10
+
 // BoxAuditTeam performs one attempt of a BoxAudit. If one is in progress for
 // the teamid, make a new attempt. If exceeded max tries or hit a malicious
 // error, return a fatal error.  Otherwise, make a new audit and fill it with
@@ -404,6 +438,9 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 		}
 		log.Audits = append(log.Audits, audit)
 	}
+	if len(log.Audits) > MaxBoxAuditLogSize {
+		log.Audits = log.Audits[MaxBoxAuditLogSize-len(log.Audits):]
+	}
 	log.InProgress = attempt.Result == keybase1.BoxAuditAttemptResult_FAILURE_RETRYABLE
 
 	err = putToDisk(mctx, dbKey, log)
@@ -434,7 +471,31 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 	return nil
 }
 
+func (a *BoxAuditor) AssertOKOrReaudit(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
+	inJail, err := mctx.G().GetTeamBoxAuditor().IsInJail(mctx, teamID)
+	if err != nil {
+		return fmt.Errorf("failed to check box audit jail during team load: %s", err)
+	}
+	if !inJail {
+		return nil
+	}
+	err = a.BoxAuditTeam(mctx, teamID)
+	if err != nil {
+		return fmt.Errorf("failed to reaudit team in box audit jail: %s", err)
+	}
+	return nil
+}
+
 func (a *BoxAuditor) IsInJail(mctx libkb.MetaContext, teamID keybase1.TeamID) (bool, error) {
+	val, ok := a.jailLRU.Get(teamID)
+	if ok {
+		valBool, ok := val.(bool)
+		if !ok {
+			return false, fmt.Errorf("failed to coerce jail lru member %+v to bool", val)
+		}
+		return valBool, nil
+	}
+
 	var jail BoxAuditJail
 	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditJailDbKey(), &jail, a.Version)
 	if err != nil {
@@ -443,11 +504,14 @@ func (a *BoxAuditor) IsInJail(mctx libkb.MetaContext, teamID keybase1.TeamID) (b
 	if !found {
 		return false, nil
 	}
-	_, ok := jail.TeamIDs[teamID]
+	_, ok = jail.TeamIDs[teamID]
+	a.jailLRU.Add(teamID, ok)
 	return ok, nil
 }
 
 func (a *BoxAuditor) jail(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
+	a.jailLRU.Add(teamID, true)
+
 	var jail BoxAuditJail
 	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditJailDbKey(), &jail, a.Version)
 	if err != nil {
@@ -465,6 +529,8 @@ func (a *BoxAuditor) jail(mctx libkb.MetaContext, teamID keybase1.TeamID) error 
 }
 
 func (a *BoxAuditor) unjail(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
+	a.jailLRU.Add(teamID, false)
+
 	var jail BoxAuditJail
 	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditJailDbKey(), &jail, a.Version)
 	if err != nil {

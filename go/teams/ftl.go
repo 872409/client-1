@@ -83,6 +83,15 @@ func FTL(m libkb.MetaContext, arg keybase1.FastTeamLoadArg) (res keybase1.FastTe
 func (f *FastTeamChainLoader) Load(m libkb.MetaContext, arg keybase1.FastTeamLoadArg) (res keybase1.FastTeamLoadRes, err error) {
 	m = ftlLogTag(m)
 	defer m.CTraceTimed(fmt.Sprintf("FastTeamChainLoader#Load(%+v)", arg), func() error { return err })()
+	defer func() {
+		if err != nil {
+			teamID := res.Name.ToTeamID(arg.Public)
+			err = m.G().GetTeamBoxAuditor().AssertOKOrReaudit(m, teamID)
+			if err != nil {
+				m.G().NotifyRouter.HandleBoxAuditError(err.Error())
+			}
+		}
+	}()
 
 	err = f.featureFlagGate.ErrorIfFlagged(m)
 	if err != nil {
@@ -103,6 +112,7 @@ func (f *FastTeamChainLoader) Load(m libkb.MetaContext, arg keybase1.FastTeamLoa
 	if !arg.AssertTeamName.Eq(res.Name) {
 		return res, NewBadNameError(fmt.Sprintf("After force-refresh, still bad team name: wanted %s, but got %s", arg.AssertTeamName.String(), res.Name.String()))
 	}
+
 	return res, nil
 }
 

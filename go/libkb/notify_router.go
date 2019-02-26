@@ -93,6 +93,7 @@ type NotifyListener interface {
 	PhoneNumberSuperseded(phoneNumber keybase1.PhoneNumber)
 	PasswordChanged()
 	RootAuditError(msg string)
+	BoxAuditError(msg string)
 }
 
 type NoopNotifyListener struct{}
@@ -192,6 +193,7 @@ func (n *NoopNotifyListener) PhoneNumberVerified(phoneNumber keybase1.PhoneNumbe
 func (n *NoopNotifyListener) PhoneNumberSuperseded(phoneNumber keybase1.PhoneNumber) {}
 func (n *NoopNotifyListener) PasswordChanged()                                       {}
 func (n *NoopNotifyListener) RootAuditError(msg string)                              {}
+func (n *NoopNotifyListener) BoxAuditError(msg string)                               {}
 
 type NotifyListenerID string
 
@@ -2074,4 +2076,27 @@ func (n *NotifyRouter) HandleRootAuditError(msg string) {
 	})
 
 	n.G().Log.Debug("- merkle tree audit notification sent")
+}
+
+func (n *NotifyRouter) HandleBoxAuditError(msg string) {
+	if n == nil {
+		return
+	}
+	n.G().Log.Debug("+ Sending BoxAuditError notification")
+	defer n.G().Log.Debug("- Sending BoxAuditError notification")
+
+	n.cm.ApplyAll(func(id ConnectionID, xp rpc.Transporter) bool {
+		if n.getNotificationChannels(id).Audit {
+			go func() {
+				(keybase1.NotifyAuditClient{
+					Cli: rpc.NewClient(xp, NewContextifiedErrorUnwrapper(n.G()), nil),
+				}).BoxAuditError(context.Background(), msg)
+			}()
+		}
+		return true
+	})
+
+	n.runListeners(func(listener NotifyListener) {
+		listener.BoxAuditError(msg)
+	})
 }

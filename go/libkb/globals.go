@@ -324,6 +324,11 @@ func (g *GlobalContext) Logout(ctx context.Context) (err error) {
 		st.OnLogout()
 	}
 
+	tba := g.teamBoxAuditor
+	if tba != nil {
+		tba.OnLogout(mctx)
+	}
+
 	// remove stored secret
 	g.secretStoreMu.Lock()
 	if g.secretStore != nil && !username.IsNil() {
