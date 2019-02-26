@@ -492,7 +492,7 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 	return nil
 }
 
-func (a *BoxAuditor) AssertOKOrReaudit(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
+func (a *BoxAuditor) AssertUnjailedOrReaudit(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
 	mctx = mctx.WithLogTag(BoxAuditTag)
 	inJail, err := mctx.G().GetTeamBoxAuditor().IsInJail(mctx, teamID)
 	if err != nil {

@@ -86,7 +86,7 @@ func (f *FastTeamChainLoader) Load(m libkb.MetaContext, arg keybase1.FastTeamLoa
 	defer func() {
 		if err != nil {
 			teamID := res.Name.ToTeamID(arg.Public)
-			err = m.G().GetTeamBoxAuditor().AssertOKOrReaudit(m, teamID)
+			err = m.G().GetTeamBoxAuditor().AssertUnjailedOrReaudit(m, teamID)
 			if err != nil {
 				m.G().NotifyRouter.HandleBoxAuditError(err.Error())
 			}

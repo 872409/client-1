@@ -119,7 +119,7 @@ var nullBoxAuditorError = fmt.Errorf("No team box auditor found. Are you running
 
 var _ TeamBoxAuditor = nullTeamBoxAuditor{}
 
-func (n nullTeamBoxAuditor) AssertOKOrReaudit(m MetaContext, id keybase1.TeamID) error {
+func (n nullTeamBoxAuditor) AssertUnjailedOrReaudit(m MetaContext, id keybase1.TeamID) error {
 	return nullBoxAuditorError
 }
 

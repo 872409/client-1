@@ -310,7 +310,7 @@ func (l *TeamLoader) load1(ctx context.Context, me keybase1.UserVersion, lArg ke
 
 	if !lArg.SkipBoxAuditCheck {
 		mctx := libkb.NewMetaContext(ctx, l.G())
-		err = l.G().GetTeamBoxAuditor().AssertOKOrReaudit(mctx, teamID)
+		err = l.G().GetTeamBoxAuditor().AssertUnjailedOrReaudit(mctx, teamID)
 		if err != nil {
 			l.G().NotifyRouter.HandleBoxAuditError(err.Error())
 		}
