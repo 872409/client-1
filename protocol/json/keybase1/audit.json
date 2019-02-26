@@ -65,6 +65,19 @@
     }
   ],
   "messages": {
+    "isInJail": {
+      "request": [
+        {
+          "name": "sessionID",
+          "type": "int"
+        },
+        {
+          "name": "teamID",
+          "type": "TeamID"
+        }
+      ],
+      "response": "boolean"
+    },
     "boxAuditTeam": {
       "request": [
         {
@@ -106,18 +119,6 @@
         "type": "array",
         "items": "TeamID"
       }
-    },
-    "randomKnownTeamID": {
-      "request": [
-        {
-          "name": "sessionID",
-          "type": "int"
-        }
-      ],
-      "response": [
-        null,
-        "TeamID"
-      ]
     }
   },
   "namespace": "keybase.1"

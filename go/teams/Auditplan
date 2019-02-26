@@ -1,10 +1,5 @@
-What happens if member is added while audit happens or some s8rs thing like that?
-So may always need to do retry even if OK server...
-
 Also CLI options to trigger box audits... how does that interact withs chedule? Maybe no scheduling.
 Make sure works fine if manually triggered several times
-
-env var to disable too
 
 NEEED WAY MORE LOGGING!
 
@@ -15,17 +10,22 @@ Maybe ServerMal functions have a special suffix
 or opposite (Suspicious? or different err type...:()
 
 It's ok if there's no box audit summary because we can just rotate and then there will be one ETC.
+TODO stop hard requiring audit summaries in chain loader... just optionalok?
 
 handle boxAuditError in gui
 Tests
-CMD
+CMD work
 I wonder if we need some way for TeamBoxAudit to return a nonfatal error if retryable...
 
-// TODO put in ftl
 // TODO make sure it still works if we're in jail. we need
 // some logic that filters jailed bros out of the random selection BUT
 // still allows it when manually auditing
+or maybe not
 
-what if we keep trying to load a team we can't audit because subteam reader...
-fml
-cant happen because load1 is always explicit. ;;
+provide rotate before audit fn?
+
+GET RID OF HASH IN ENDPOINT
+
+TODO ROLLOUT! PEOPLE HAVE IN CACHE BUT NO BOXSUMMARHASHES...
+
+put the permanent in noclean

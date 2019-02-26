@@ -24,6 +24,12 @@ func NewAuditHandler(xp rpc.Transporter, g *libkb.GlobalContext) *AuditHandler {
 
 var ta_ keybase1.AuditInterface = (*AuditHandler)(nil)
 
+func (h *AuditHandler) IsInJail(ctx context.Context, arg keybase1.IsInJailArg) (ret bool, err error) {
+	mctx := libkb.NewMetaContext(ctx, h.G())
+	defer mctx.CTraceTimed("AuditHandler#IsInJail", func() error { return err })()
+	return h.G().GetTeamBoxAuditor().IsInJail(mctx, arg.TeamID)
+}
+
 func (h *AuditHandler) BoxAuditTeam(ctx context.Context, arg keybase1.BoxAuditTeamArg) (err error) {
 	mctx := libkb.NewMetaContext(ctx, h.G())
 	defer mctx.CTraceTimed("AuditHandler#BoxAuditTeam", func() error { return err })()
@@ -40,10 +46,4 @@ func (h *AuditHandler) KnownTeamIDs(ctx context.Context, sessionID int) (res []k
 	mctx := libkb.NewMetaContext(ctx, h.G())
 	defer mctx.CTraceTimed("AuditHandler#KnownTeamIDs", func() error { return err })()
 	return teams.KnownTeamIDs(mctx)
-}
-
-func (h *AuditHandler) RandomKnownTeamID(ctx context.Context, sessionID int) (res *keybase1.TeamID, err error) {
-	mctx := libkb.NewMetaContext(ctx, h.G())
-	defer mctx.CTraceTimed("AuditHandler#KnownTeamIDs", func() error { return err })()
-	return teams.RandomKnownTeamID(mctx)
 }

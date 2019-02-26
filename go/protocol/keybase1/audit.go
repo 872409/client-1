@@ -89,6 +89,11 @@ func (o BoxAuditAttempt) DeepCopy() BoxAuditAttempt {
 	}
 }
 
+type IsInJailArg struct {
+	SessionID int    `codec:"sessionID" json:"sessionID"`
+	TeamID    TeamID `codec:"teamID" json:"teamID"`
+}
+
 type BoxAuditTeamArg struct {
 	SessionID int    `codec:"sessionID" json:"sessionID"`
 	TeamID    TeamID `codec:"teamID" json:"teamID"`
@@ -104,21 +109,32 @@ type KnownTeamIDsArg struct {
 	SessionID int `codec:"sessionID" json:"sessionID"`
 }
 
-type RandomKnownTeamIDArg struct {
-	SessionID int `codec:"sessionID" json:"sessionID"`
-}
-
 type AuditInterface interface {
+	IsInJail(context.Context, IsInJailArg) (bool, error)
 	BoxAuditTeam(context.Context, BoxAuditTeamArg) error
 	AttemptBoxAudit(context.Context, AttemptBoxAuditArg) (BoxAuditAttempt, error)
 	KnownTeamIDs(context.Context, int) ([]TeamID, error)
-	RandomKnownTeamID(context.Context, int) (*TeamID, error)
 }
 
 func AuditProtocol(i AuditInterface) rpc.Protocol {
 	return rpc.Protocol{
 		Name: "keybase.1.audit",
 		Methods: map[string]rpc.ServeHandlerDescription{
+			"isInJail": {
+				MakeArg: func() interface{} {
+					var ret [1]IsInJailArg
+					return &ret
+				},
+				Handler: func(ctx context.Context, args interface{}) (ret interface{}, err error) {
+					typedArgs, ok := args.(*[1]IsInJailArg)
+					if !ok {
+						err = rpc.NewTypeError((*[1]IsInJailArg)(nil), args)
+						return
+					}
+					ret, err = i.IsInJail(ctx, typedArgs[0])
+					return
+				},
+			},
 			"boxAuditTeam": {
 				MakeArg: func() interface{} {
 					var ret [1]BoxAuditTeamArg
@@ -164,27 +180,17 @@ func AuditProtocol(i AuditInterface) rpc.Protocol {
 					return
 				},
 			},
-			"randomKnownTeamID": {
-				MakeArg: func() interface{} {
-					var ret [1]RandomKnownTeamIDArg
-					return &ret
-				},
-				Handler: func(ctx context.Context, args interface{}) (ret interface{}, err error) {
-					typedArgs, ok := args.(*[1]RandomKnownTeamIDArg)
-					if !ok {
-						err = rpc.NewTypeError((*[1]RandomKnownTeamIDArg)(nil), args)
-						return
-					}
-					ret, err = i.RandomKnownTeamID(ctx, typedArgs[0].SessionID)
-					return
-				},
-			},
 		},
 	}
 }
 
 type AuditClient struct {
 	Cli rpc.GenericClient
+}
+
+func (c AuditClient) IsInJail(ctx context.Context, __arg IsInJailArg) (res bool, err error) {
+	err = c.Cli.Call(ctx, "keybase.1.audit.isInJail", []interface{}{__arg}, &res)
+	return
 }
 
 func (c AuditClient) BoxAuditTeam(ctx context.Context, __arg BoxAuditTeamArg) (err error) {
@@ -200,11 +206,5 @@ func (c AuditClient) AttemptBoxAudit(ctx context.Context, __arg AttemptBoxAuditA
 func (c AuditClient) KnownTeamIDs(ctx context.Context, sessionID int) (res []TeamID, err error) {
 	__arg := KnownTeamIDsArg{SessionID: sessionID}
 	err = c.Cli.Call(ctx, "keybase.1.audit.knownTeamIDs", []interface{}{__arg}, &res)
-	return
-}
-
-func (c AuditClient) RandomKnownTeamID(ctx context.Context, sessionID int) (res *TeamID, err error) {
-	__arg := RandomKnownTeamIDArg{SessionID: sessionID}
-	err = c.Cli.Call(ctx, "keybase.1.audit.randomKnownTeamID", []interface{}{__arg}, &res)
 	return
 }

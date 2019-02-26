@@ -95,7 +95,7 @@ func (a *BoxAuditor) getJailLRU() *lru.Cache {
 	return a.jailLRU
 }
 
-const JailLRUSize = 25
+const JailLRUSize = 100
 
 func (a *BoxAuditor) resetJailLRU() {
 	a.jailLRUMutex.Lock()
@@ -121,6 +121,7 @@ func NewBoxAuditor(g *libkb.GlobalContext) *BoxAuditor {
 		Initialized: true,
 		Version:     CurrentBoxAuditVersion,
 	}
+	a.resetJailLRU()
 	a.jailLRU = a.getJailLRU()
 	return a
 }
@@ -387,6 +388,18 @@ func (a *BoxAuditor) BoxAuditRandomTeam(mctx libkb.MetaContext) error {
 
 const MaxBoxAuditLogSize = 10
 
+func (a *BoxAuditor) GetBoxAuditLog(mctx libkb.MetaContext, teamID keybase1.TeamID) (*BoxAuditLog, error) {
+	var log BoxAuditLog
+	found, err := maybeGetVersionedFromDisk(mctx, BoxAuditLogDbKey(teamID), &log, a.Version)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("could not find log for team id %s", teamID)
+	}
+	return &log, nil
+}
+
 // BoxAuditTeam performs one attempt of a BoxAudit. If one is in progress for
 // the teamid, make a new attempt. If exceeded max tries or hit a malicious
 // error, return a fatal error.  Otherwise, make a new audit and fill it with
@@ -395,7 +408,6 @@ const MaxBoxAuditLogSize = 10
 // the jail.
 func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID) error {
 	a.Lock()
-	// TODO when do we have to unlock db?
 	defer a.Unlock()
 
 	mctx = mctx.WithLogTag("SUMAUD")
@@ -464,6 +476,10 @@ func (a *BoxAuditor) BoxAuditTeam(mctx libkb.MetaContext, teamID keybase1.TeamID
 		}
 	}
 
+	err = a.clearRetryQueueOf(mctx, teamID)
+	if err != nil {
+		return NonfatalBoxAuditError{err}
+	}
 	err = a.unjail(mctx, teamID)
 	if err != nil {
 		return NonfatalBoxAuditError{err}
@@ -612,6 +628,8 @@ func (a *BoxAuditor) Attempt(mctx libkb.MetaContext, teamID keybase1.TeamID, rot
 		attempt.Result = keybase1.BoxAuditAttemptResult_OK_NOT_ATTEMPTED
 		return attempt
 	}
+
+	spew.Dump("@@@ACTSUM")
 
 	actualSummary, err := retrieveAndVerifySigchainSummary(mctx, team)
 	if err != nil {

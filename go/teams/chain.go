@@ -898,7 +898,7 @@ func (t *teamSigchainPlayer) addInnerLink(
 			Name:                TristateRequire,
 			Members:             TristateRequire,
 			PerTeamKey:          TristateRequire,
-			BoxSummaryHash:      TristateRequire,
+			BoxSummaryHash:      TristateOptional,
 			Invites:             TristateOptional,
 			Settings:            TristateOptional,
 			AllowInImplicitTeam: true,
@@ -1011,7 +1011,7 @@ func (t *teamSigchainPlayer) addInnerLink(
 			PerTeamKey:          TristateOptional,
 			Admin:               TristateOptional,
 			CompletedInvites:    TristateOptional,
-			BoxSummaryHash:      TristateOptional,
+			BoxSummaryHash:      TristateOptional, //always optional
 			AllowInImplicitTeam: true,
 		}
 		err = enforce(changeMembershipRules)
@@ -1149,7 +1149,7 @@ func (t *teamSigchainPlayer) addInnerLink(
 
 		if team.PerTeamKey != nil {
 			// TODO won't be true until after a certain date...
-			changeMembershipRules.BoxSummaryHash = TristateRequire
+			changeMembershipRules.BoxSummaryHash = TristateOptional
 			err = enforce(changeMembershipRules)
 			if err != nil {
 				return res, err
@@ -1179,7 +1179,7 @@ func (t *teamSigchainPlayer) addInnerLink(
 		err = enforce(LinkRules{
 			PerTeamKey:          TristateRequire,
 			Admin:               TristateOptional,
-			BoxSummaryHash:      TristateRequire,
+			BoxSummaryHash:      TristateOptional,
 			AllowInImplicitTeam: true,
 		})
 		if err != nil {
@@ -1282,7 +1282,7 @@ func (t *teamSigchainPlayer) addInnerLink(
 			PerTeamKey:     TristateRequire,
 			Admin:          TristateOptional,
 			Settings:       TristateOptional,
-			BoxSummaryHash: TristateRequire,
+			BoxSummaryHash: TristateOptional,
 			FirstInChain:   true,
 		})
 		if err != nil {
@@ -1646,7 +1646,8 @@ func (t *teamSigchainPlayer) addInnerLink(
 	g := res.newState.GetLatestGeneration()
 	batch := res.newState.inner.BoxSummaryHashes[g]
 	// TODO may not exist etc
-	if team.BoxSummaryHash != nil {
+	// TODO remove != nil check, do rollout handling
+	if team.BoxSummaryHash != nil && res.newState.inner.BoxSummaryHashes != nil {
 		res.newState.inner.BoxSummaryHashes[g] = append(batch, team.BoxSummaryHash.BoxSummaryHash())
 	}
 
