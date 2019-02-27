@@ -167,6 +167,9 @@ func (t *BaseServiceType) CanMakeNewProofs(mctx MetaContext) bool {
 	if t.displayConf == nil {
 		return true
 	}
+	if mctx.G().GetEnv().GetFeatureFlags().Admin() {
+		return true
+	}
 	return !t.displayConf.CreationDisabled
 }
 
