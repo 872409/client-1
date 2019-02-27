@@ -283,6 +283,7 @@ export type PathItems = I.Map<Path, PathItem>
 export type Edits = I.Map<EditID, Edit>
 
 export type _MoveOrCopy = {
+  type: 'move-or-copy',
   sourceItemPath: Path,
   // id -> Path mapping. This is useful for mobile when we have multiple layers
   // stacked on top of each other, and we need to keep track of them for the
@@ -291,7 +292,13 @@ export type _MoveOrCopy = {
   // routeToSibling.
   destinationParentPath: I.List<Path>,
 }
-export type MoveOrCopy = I.RecordOf<_MoveOrCopy>
+
+export type _IncomingShare = {
+  type: 'incoming-share',
+  sourceItemLocalPath: LocalPath,
+  destinationParentPath: I.List<Path>,
+}
+export type DestinationPicker = I.RecordOf<_IncomingShare> | I.RecordOf<_MoveOrCopy>
 
 export type _SendLinkToChat = {
   path: Path,
@@ -325,7 +332,7 @@ export type _State = {
   localHTTPServerInfo: ?LocalHTTPServer,
   errors: I.Map<string, FsError>,
   tlfUpdates: UserTlfUpdates,
-  moveOrCopy: MoveOrCopy,
+  destinationPicker: DestinationPicker,
   sendLinkToChat: SendLinkToChat,
   pathItemActionMenu: PathItemActionMenu,
 }
@@ -351,9 +358,9 @@ export const stringToEditID = (s: string): EditID => s
 export const editIDToString = (s: EditID): string => s
 export const stringToPath = (s: string): Path => (s.indexOf('/') === 0 ? s : null)
 export const pathToString = (p: Path): string => (!p ? '' : p)
-// export const stringToLocalPath = (s: string): LocalPath => s
-// export const localPathToString = (p: LocalPath): string => p
-export const getPathName = (p: Path): string => (!p ? '' : p.split('/').pop())
+export const stringToLocalPath = (s: string): LocalPath => s
+export const localPathToString = (p: LocalPath): string => p
+export const getPathName = (p: Path | string): string => (!p ? '' : p.split('/').pop())
 export const getPathNameFromElems = (elems: Array<string>): string => {
   if (elems.length === 0) return ''
   return elems[elems.length - 1]
