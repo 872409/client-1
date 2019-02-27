@@ -63,6 +63,8 @@ export const placeholderAction = 'fs:placeholderAction'
 export const refreshLocalHTTPServerInfo = 'fs:refreshLocalHTTPServerInfo'
 export const saveMedia = 'fs:saveMedia'
 export const setFlags = 'fs:setFlags'
+export const setIncomingShareDestinationPath = 'fs:setIncomingShareDestinationPath'
+export const setIncomingShareLocalPath = 'fs:setIncomingShareLocalPath'
 export const setMoveOrCopyDestinationParentPath = 'fs:setMoveOrCopyDestinationParentPath'
 export const setMoveOrCopySource = 'fs:setMoveOrCopySource'
 export const setPathItemActionMenuDownloadKey = 'fs:setPathItemActionMenuDownloadKey'
@@ -70,6 +72,7 @@ export const setPathItemActionMenuView = 'fs:setPathItemActionMenuView'
 export const setSendLinkToChatChannels = 'fs:setSendLinkToChatChannels'
 export const setSendLinkToChatConvID = 'fs:setSendLinkToChatConvID'
 export const shareNative = 'fs:shareNative'
+export const showIncomingShare = 'fs:showIncomingShare'
 export const showMoveOrCopy = 'fs:showMoveOrCopy'
 export const showSendLinkToChat = 'fs:showSendLinkToChat'
 export const sortSetting = 'fs:sortSetting'
@@ -134,6 +137,8 @@ type _PlaceholderActionPayload = void
 type _RefreshLocalHTTPServerInfoPayload = void
 type _SaveMediaPayload = $ReadOnly<{|path: Types.Path, key: string|}>
 type _SetFlagsPayload = $ReadOnly<{|kbfsOpening?: boolean, kbfsInstalling?: boolean, fuseInstalling?: boolean, kextPermissionError?: boolean, securityPrefsPrompted?: boolean, showBanner?: boolean|}>
+type _SetIncomingShareDestinationPathPayload = $ReadOnly<{|index: number, path: Types.Path|}>
+type _SetIncomingShareLocalPathPayload = $ReadOnly<{|localPath: Types.LocalPath|}>
 type _SetMoveOrCopyDestinationParentPathPayload = $ReadOnly<{|index: number, path: Types.Path|}>
 type _SetMoveOrCopySourcePayload = $ReadOnly<{|path: Types.Path|}>
 type _SetPathItemActionMenuDownloadKeyPayload = $ReadOnly<{|key: ?string|}>
@@ -141,6 +146,7 @@ type _SetPathItemActionMenuViewPayload = $ReadOnly<{|view: Types.PathItemActionM
 type _SetSendLinkToChatChannelsPayload = $ReadOnly<{|channels: I.Map<ChatTypes.ConversationIDKey, string>|}>
 type _SetSendLinkToChatConvIDPayload = $ReadOnly<{|convID: ChatTypes.ConversationIDKey|}>
 type _ShareNativePayload = $ReadOnly<{|path: Types.Path, key: string|}>
+type _ShowIncomingSharePayload = $ReadOnly<{|initialDestinationParentPath: Types.Path|}>
 type _ShowMoveOrCopyPayload = $ReadOnly<{|initialDestinationParentPath: Types.Path|}>
 type _ShowSendLinkToChatPayload = $ReadOnly<{|path: Types.Path, routePath?: ?I.List<string>|}>
 type _SortSettingPayload = $ReadOnly<{|path: Types.Path, sortSetting: Types.SortSetting|}>
@@ -205,6 +211,8 @@ export const createPlaceholderAction = (payload: _PlaceholderActionPayload) => (
 export const createRefreshLocalHTTPServerInfo = (payload: _RefreshLocalHTTPServerInfoPayload) => ({payload, type: refreshLocalHTTPServerInfo})
 export const createSaveMedia = (payload: _SaveMediaPayload) => ({payload, type: saveMedia})
 export const createSetFlags = (payload: _SetFlagsPayload) => ({payload, type: setFlags})
+export const createSetIncomingShareDestinationPath = (payload: _SetIncomingShareDestinationPathPayload) => ({payload, type: setIncomingShareDestinationPath})
+export const createSetIncomingShareLocalPath = (payload: _SetIncomingShareLocalPathPayload) => ({payload, type: setIncomingShareLocalPath})
 export const createSetMoveOrCopyDestinationParentPath = (payload: _SetMoveOrCopyDestinationParentPathPayload) => ({payload, type: setMoveOrCopyDestinationParentPath})
 export const createSetMoveOrCopySource = (payload: _SetMoveOrCopySourcePayload) => ({payload, type: setMoveOrCopySource})
 export const createSetPathItemActionMenuDownloadKey = (payload: _SetPathItemActionMenuDownloadKeyPayload) => ({payload, type: setPathItemActionMenuDownloadKey})
@@ -212,6 +220,7 @@ export const createSetPathItemActionMenuView = (payload: _SetPathItemActionMenuV
 export const createSetSendLinkToChatChannels = (payload: _SetSendLinkToChatChannelsPayload) => ({payload, type: setSendLinkToChatChannels})
 export const createSetSendLinkToChatConvID = (payload: _SetSendLinkToChatConvIDPayload) => ({payload, type: setSendLinkToChatConvID})
 export const createShareNative = (payload: _ShareNativePayload) => ({payload, type: shareNative})
+export const createShowIncomingShare = (payload: _ShowIncomingSharePayload) => ({payload, type: showIncomingShare})
 export const createShowMoveOrCopy = (payload: _ShowMoveOrCopyPayload) => ({payload, type: showMoveOrCopy})
 export const createShowSendLinkToChat = (payload: _ShowSendLinkToChatPayload) => ({payload, type: showSendLinkToChat})
 export const createSortSetting = (payload: _SortSettingPayload) => ({payload, type: sortSetting})
@@ -276,6 +285,8 @@ export type PlaceholderActionPayload = {|+payload: _PlaceholderActionPayload, +t
 export type RefreshLocalHTTPServerInfoPayload = {|+payload: _RefreshLocalHTTPServerInfoPayload, +type: 'fs:refreshLocalHTTPServerInfo'|}
 export type SaveMediaPayload = {|+payload: _SaveMediaPayload, +type: 'fs:saveMedia'|}
 export type SetFlagsPayload = {|+payload: _SetFlagsPayload, +type: 'fs:setFlags'|}
+export type SetIncomingShareDestinationPathPayload = {|+payload: _SetIncomingShareDestinationPathPayload, +type: 'fs:setIncomingShareDestinationPath'|}
+export type SetIncomingShareLocalPathPayload = {|+payload: _SetIncomingShareLocalPathPayload, +type: 'fs:setIncomingShareLocalPath'|}
 export type SetMoveOrCopyDestinationParentPathPayload = {|+payload: _SetMoveOrCopyDestinationParentPathPayload, +type: 'fs:setMoveOrCopyDestinationParentPath'|}
 export type SetMoveOrCopySourcePayload = {|+payload: _SetMoveOrCopySourcePayload, +type: 'fs:setMoveOrCopySource'|}
 export type SetPathItemActionMenuDownloadKeyPayload = {|+payload: _SetPathItemActionMenuDownloadKeyPayload, +type: 'fs:setPathItemActionMenuDownloadKey'|}
@@ -283,6 +294,7 @@ export type SetPathItemActionMenuViewPayload = {|+payload: _SetPathItemActionMen
 export type SetSendLinkToChatChannelsPayload = {|+payload: _SetSendLinkToChatChannelsPayload, +type: 'fs:setSendLinkToChatChannels'|}
 export type SetSendLinkToChatConvIDPayload = {|+payload: _SetSendLinkToChatConvIDPayload, +type: 'fs:setSendLinkToChatConvID'|}
 export type ShareNativePayload = {|+payload: _ShareNativePayload, +type: 'fs:shareNative'|}
+export type ShowIncomingSharePayload = {|+payload: _ShowIncomingSharePayload, +type: 'fs:showIncomingShare'|}
 export type ShowMoveOrCopyPayload = {|+payload: _ShowMoveOrCopyPayload, +type: 'fs:showMoveOrCopy'|}
 export type ShowSendLinkToChatPayload = {|+payload: _ShowSendLinkToChatPayload, +type: 'fs:showSendLinkToChat'|}
 export type SortSettingPayload = {|+payload: _SortSettingPayload, +type: 'fs:sortSetting'|}
@@ -349,6 +361,8 @@ export type Actions =
   | RefreshLocalHTTPServerInfoPayload
   | SaveMediaPayload
   | SetFlagsPayload
+  | SetIncomingShareDestinationPathPayload
+  | SetIncomingShareLocalPathPayload
   | SetMoveOrCopyDestinationParentPathPayload
   | SetMoveOrCopySourcePayload
   | SetPathItemActionMenuDownloadKeyPayload
@@ -356,6 +370,7 @@ export type Actions =
   | SetSendLinkToChatChannelsPayload
   | SetSendLinkToChatConvIDPayload
   | ShareNativePayload
+  | ShowIncomingSharePayload
   | ShowMoveOrCopyPayload
   | ShowSendLinkToChatPayload
   | SortSettingPayload
